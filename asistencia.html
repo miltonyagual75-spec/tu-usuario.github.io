@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Asistencia UESER Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        #qr-reader video {
+            border-radius: 12px;
+        }
+        
+        .stats-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-button {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 3px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            animation: slideInRight 0.5s ease;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+        
+        .scan-frame {
+            position: relative;
+            border: 3px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+        
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
+
+    <!-- Notificaciones flotantes -->
+    <div id="notification-container" class="fixed top-5 right-5 z-50 space-y-3"></div>
+
+    <!-- Header Principal -->
+    <header class="gradient-bg text-white py-6 shadow-2xl">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold flex items-center gap-3">
+                        🎓 Sistema UESER
+                        <span class="text-sm bg-white/20 px-3 py-1 rounded-full">Pro</span>
+                    </h1>
+                    <p class="text-sm text-white/80 mt-1">Control de Asistencia Inteligente</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="security-badge" class="text-xs bg-white/20 px-3 py-2 rounded-lg">
+                        <span id="security-text">🔒 Seguro</span>
+                    </div>
+                    <button id="help-btn" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition">
+                        ❓
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-7xl mx-auto">
+            
+            <!-- Dashboard de Estadísticas -->
+            <div id="dashboard-section" class="mb-8 fade-in">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">📊 Panel de Control</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="stats-card bg-white rounded-2xl p-6 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium">Total Cursos</p>
+                                <p id="stat-courses" class="text-4xl font-bold text-blue-600">0</p>
+                            </div>
+                            <div class="text-5xl">📚</div>
+                        </div>
+                    </div>
+                    <div class="stats-card bg-white rounded-2xl p-6 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium">Total Estudiantes</p>
+                                <p id="stat-students" class="text-4xl font-bold text-green-600">0</p>
+                            </div>
+                            <div class="text-5xl">👥</div>
+                        </div>
+                    </div>
+                    <div class="stats-card bg-white rounded-2xl p-6 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium">Asistencia Hoy</p>
+                                <p id="stat-today" class="text-4xl font-bold text-purple-600">0</p>
+                            </div>
+                            <div class="text-5xl">✅</div>
+                        </div>
+                    </div>
+                    <div class="stats-card bg-white rounded-2xl p-6 shadow-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium">Promedio %</p>
+                                <p id="stat-average" class="text-4xl font-bold text-orange-600">0%</p>
+                            </div>
+                            <div class="text-5xl">📈</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico de asistencia semanal -->
+                <div class="bg-white rounded-2xl p-6 shadow-lg mb-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">📈 Asistencia de los Últimos 7 Días</h3>
+                    <canvas id="attendanceChart" height="80"></canvas>
+                </div>
+
+                <!-- Acciones rápidas -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button id="quick-scan-btn" class="bg-gradient-to-r from-teal-500 to-teal-600 text-white p-6 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                        📱 Escaneo Rápido
+                    </button>
+                    <button id="quick-courses-btn" class="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                        📚 Gestionar Cursos
+                    </button>
+                    <button id="quick-reports-btn" class="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                        📊 Ver Reportes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs de navegación -->
+            <div class="bg-white rounded-2xl shadow-xl p-2 mb-6">
+                <div class="flex flex-wrap gap-2">
+                    <button class="tab-button active px-6 py-3 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition" data-tab="dashboard">
+                        🏠 Inicio
+                    </button>
+                    <button class="tab-button px-6 py-3 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition" data-tab="courses">
+                        📚 Cursos
+                    </button>
+                    <button class="tab-button px-6 py-3 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition" data-tab="attendance">
+                        📱 Asistencia
+                    </button>
+                    <button class="tab-button px-6 py-3 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition" data-tab="reports">
+                        📊 Reportes
+                    </button>
+                    <button class="tab-button px-6 py-3 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition" data-tab="settings">
+                        ⚙️ Configuración
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sección de Cursos -->
+            <div id="courses-section" class="hidden">
+                <div class="bg-white rounded-2xl shadow-xl p-6 slide-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        📚 Gestión de Cursos
+                    </h2>
+                    
+                    <!-- Buscador de cursos -->
+                    <div class="mb-6">
+                        <input type="text" id="search-courses" placeholder="🔍 Buscar cursos..." 
+                               class="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition">
+                    </div>
+
+                    <!-- Formulario para agregar curso -->
+                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+                        <h3 class="font-bold text-gray-700 mb-4">➕ Nuevo Curso</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input type="text" id="course-name-input" placeholder="Nombre del curso" 
+                                   class="p-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition">
+                            <input type="text" id="course-teacher-input" placeholder="Profesor (opcional)" 
+                                   class="p-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition">
+                            <button id="add-course-btn" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5">
+                                ✨ Crear Curso
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de cursos -->
+                    <div id="course-list" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- Sección de Estudiantes -->
+            <div id="students-section" class="hidden">
+                <div class="bg-white rounded-2xl shadow-xl p-6 slide-in">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            👥 Estudiantes: <span id="current-course-name" class="text-blue-600"></span>
+                        </h2>
+                        <button id="back-to-courses-btn" class="bg-gray-500 text-white px-4 py-2 rounded-xl hover:bg-gray-600 transition">
+                            ⬅️ Volver
+                        </button>
+                    </div>
+
+                    <!-- Búsqueda y acciones masivas -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <input type="text" id="search-students" placeholder="🔍 Buscar estudiantes..." 
+                               class="p-4 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition">
+                        <div class="flex gap-2">
+                            <button id="download-all-qr-btn" class="flex-1 bg-purple-500 text-white p-3 rounded-xl hover:bg-purple-600 transition font-semibold">
+                                📥 Descargar Todos los QR
+                            </button>
+                            <button id="import-students-btn" class="flex-1 bg-blue-500 text-white p-3 rounded-xl hover:bg-blue-600 transition font-semibold">
+                                📤 Importar Lista
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Formulario agregar estudiante -->
+                    <div class="bg-gradient-to-r from-green-50 to-teal-50 rounded-xl p-6 mb-6">
+                        <h3 class="font-bold text-gray-700 mb-4">➕ Nuevo Estudiante</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input type="text" id="student-name-input" placeholder="Nombre completo" 
+                                   class="p-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition">
+                            <input type="email" id="student-email-input" placeholder="Email (opcional)" 
+                                   class="p-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition">
+                            <button id="add-student-btn" class="bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5">
+                                ✨ Agregar Estudiante
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lista de estudiantes -->
+                    <div id="student-list" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- Sección de Asistencia -->
+            <div id="attendance-section" class="hidden">
+                <div class="bg-white rounded-2xl shadow-xl p-6 slide-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">📱 Tomar Asistencia</h2>
+
+                    <!-- Selección de curso -->
+                    <div id="course-selector" class="mb-6">
+                        <label class="block text-gray-700 font-semibold mb-3">Selecciona un curso:</label>
+                        <select id="attendance-course-select" class="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition text-lg">
+                            <option value="">-- Seleccionar curso --</option>
+                        </select>
+                    </div>
+
+                    <!-- Scanner QR -->
+                    <div id="scanner-container" class="hidden">
+                        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-gray-800 text-lg">
+                                    📚 Curso: <span id="scanning-course-name" class="text-blue-600"></span>
+                                </h3>
+                                <div id="scan-counter" class="bg-white px-4 py-2 rounded-lg shadow">
+                                    <span class="font-bold text-green-600" id="scan-count">0</span>
+                                    <span class="text-gray-600 text-sm"> escaneados</span>
+                                </div>
+                            </div>
+                            
+                            <div id="camera-status" class="mb-4 p-3 rounded-xl text-sm"></div>
+                            
+                            <div id="qr-reader" class="scan-frame rounded-xl overflow-hidden mb-4 bg-gray-900" style="min-height: 300px;"></div>
+                            
+                            <div id="scan-status" class="text-center font-semibold text-gray-700 mb-4"></div>
+                            
+                            <div id="scan-tips" class="hidden bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mb-4">
+                                <p class="font-bold text-yellow-800 mb-2">💡 Consejos para mejor escaneo:</p>
+                                <ul class="text-sm text-yellow-700 space-y-1">
+                                    <li>✓ Mantén el QR centrado y estable</li>
+                                    <li>✓ Asegura buena iluminación</li>
+                                    <li>✓ Evita reflejos en pantallas</li>
+                                    <li>✓ Usa zoom si el código es pequeño</li>
+                                </ul>
+                            </div>
+
+                            <div class="flex gap-4">
+                                <button id="start-scan-btn" class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition">
+                                    📷 Iniciar Escáner
+                                </button>
+                                <button id="manual-attendance-btn" class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition">
+                                    ✍️ Registro Manual
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Últimos escaneados -->
+                        <div id="recent-scans" class="bg-white border-2 border-gray-200 rounded-xl p-6">
+                            <h4 class="font-bold text-gray-800 mb-4">📋 Últimos Registrados</h4>
+                            <div id="recent-scans-list" class="space-y-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Reportes -->
+            <div id="reports-section" class="hidden">
+                <div class="bg-white rounded-2xl shadow-xl p-6 slide-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">📊 Centro de Reportes</h2>
+
+                    <!-- Filtros de reportes -->
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 mb-6">
+                        <h3 class="font-bold text-gray-700 mb-4">🔍 Filtros</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <select id="report-course-select" class="p-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition">
+                                <option value="">Todos los cursos</option>
+                            </select>
+                            <input type="date" id="report-date-from" class="p-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition">
+                            <input type="date" id="report-date-to" class="p-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition">
+                        </div>
+                        <button id="apply-filters-btn" class="mt-4 w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white p-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition">
+                            🔍 Aplicar Filtros
+                        </button>
+                    </div>
+
+                    <!-- Tipos de reportes disponibles -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <button id="download-excel-report-btn" class="bg-green-500 text-white p-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            📊 Reporte Excel Completo
+                        </button>
+                        <button id="download-summary-pdf-btn" class="bg-red-500 text-white p-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            📄 Resumen PDF
+                        </button>
+                        <button id="view-statistics-btn" class="bg-blue-500 text-white p-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            📈 Ver Estadísticas
+                        </button>
+                        <button id="export-qr-batch-btn" class="bg-purple-500 text-white p-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                            🎫 Exportar QR Masivo
+                        </button>
+                    </div>
+
+                    <!-- Vista previa de datos -->
+                    <div id="report-preview" class="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
+                        <h4 class="font-bold text-gray-800 mb-4">👀 Vista Previa</h4>
+                        <div id="report-preview-content" class="text-gray-600">
+                            Selecciona los filtros y genera un reporte para ver la vista previa.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Configuración -->
+            <div id="settings-section" class="hidden">
+                <div class="bg-white rounded-2xl shadow-xl p-6 slide-in">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">⚙️ Configuración del Sistema</h2>
+
+                    <!-- Gestión de datos -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6">
+                        <h3 class="font-bold text-gray-800 mb-4">💾 Gestión de Datos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button id="export-all-data-btn" class="bg-blue-500 text-white p-4 rounded-xl font-semibold hover:bg-blue-600 transition">
+                                📤 Exportar Todo (JSON)
+                            </button>
+                            <button id="import-data-btn" class="bg-green-500 text-white p-4 rounded-xl font-semibold hover:bg-green-600 transition">
+                                📥 Importar Datos
+                            </button>
+                            <button id="clear-old-data-btn" class="bg-orange-500 text-white p-4 rounded-xl font-semibold hover:bg-orange-600 transition">
+                                🧹 Limpiar Datos Antiguos
+                            </button>
+                            <button id="reset-all-btn" class="bg-red-500 text-white p-4 rounded-xl font-semibold hover:bg-red-600 transition">
+                                ⚠️ Resetear Sistema
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Configuraciones generales -->
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 mb-6">
+                        <h3 class="font-bold text-gray-800 mb-4">🎨 Preferencias</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 bg-white rounded-xl">
+                                <div>
+                                    <p class="font-semibold text-gray-800">Notificaciones de sonido</p>
+                                    <p class="text-sm text-gray-600">Reproducir sonido al escanear</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="sound-toggle" class="sr-only peer" checked>
+                                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-4 bg-white rounded-xl">
+                                <div>
+                                    <p class="font-semibold text-gray-800">Auto-backup</p>
+                                    <p class="text-sm text-gray-600">Guardar automáticamente cada día</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="autobackup-toggle" class="sr-only peer">
+                                    <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="p-4 bg-white rounded-xl">
+                                <label class="font-semibold text-gray-800 block mb-2">Tiempo entre escaneos (segundos)</label>
+                                <input type="range" id="scan-cooldown-range" min="1" max="5" value="2" class="w-full">
+                                <p class="text-sm text-gray-600 mt-2">Valor actual: <span id="cooldown-value">2</span>s</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del sistema -->
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <h3 class="font-bold text-gray-800 mb-4">ℹ️ Información del Sistema</h3>
+                        <div class="space-y-2 text-sm">
+                            <p><span class="font-semibold">Versión:</span> 2.0 Pro</p>
+                            <p><span class="font-semibold">Última actualización:</span> <span id="last-update">--</span></p>
+                            <p><span class="font-semibold">Tamaño de datos:</span> <span id="data-size">--</span></p>
+                            <p><span class="font-semibold">Navegador:</span> <span id="browser-info">--</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Registro Manual -->
+    <div id="manual-modal" class="modal-overlay fixed inset-0 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-lg slide-in shadow-2xl">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">✍️ Registro Manual de Asistencia</h3>
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold mb-2">Seleccionar estudiante:</label>
+                <select id="manual-student-select" class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition">
+                    <option value="">-- Seleccionar estudiante --</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 font-semibold mb-2">Fecha:</label>
+                <input type="date" id="manual-date-input" class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition">
+            </div>
+            <div class="flex gap-3">
+                <button id="confirm-manual-btn" class="flex-1 bg-green-500 text-white p-3 rounded-xl font-bold hover:bg-green-600 transition">
+                    ✅ Registrar
+                </button>
+                <button id="cancel-manual-btn" class="flex-1 bg-gray-500 text-white p-3 rounded-xl font-bold hover:bg-gray-600 transition">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ayuda -->
+    <div id="help-modal" class="modal-overlay fixed inset-0 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl slide-in shadow-2xl max-h-[80vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">❓ Guía de Uso Rápida</h3>
+            <div class="space-y-4">
+                <div class="bg-blue-50 rounded-xl p-4">
+                    <h4 class="font-bold text-blue-800 mb-2">📚 1. Crear Cursos</h4>
+                    <p class="text-sm text-blue-700">Ve a la sección "Cursos" y agrega los cursos que necesites. Puedes incluir el nombre del profesor.</p>
+                </div>
+                <div class="bg-green-50 rounded-xl p-4">
+                    <h4 class="font-bold text-green-800 mb-2">👥 2. Agregar Estudiantes</h4>
+                    <p class="text-sm text-green-700">Haz clic en un curso para ver sus estudiantes. Agrega estudiantes uno por uno o importa una lista.</p>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-4">
+                    <h4 class="font-bold text-purple-800 mb-2">📱 3. Generar Códigos QR</h4>
+                    <p class="text-sm text-purple-700">Cada estudiante tiene un código QR único. Puedes descargarlo individualmente o descargar todos a la vez.</p>
+                </div>
+                <div class="bg-orange-50 rounded-xl p-4">
+                    <h4 class="font-bold text-orange-800 mb-2">✅ 4. Tomar Asistencia</h4>
+                    <p class="text-sm text-orange-700">Ve a "Asistencia", selecciona el curso y escanea los códigos QR de los estudiantes.</p>
+                </div>
+                <div class="bg-pink-50 rounded-xl p-4">
+                    <h4 class="font-bold text-pink-800 mb-2">📊 5. Generar Reportes</h4>
+                    <p class="text-sm text-pink-700">En "Reportes" puedes exportar las asistencias en formato Excel con estadísticas completas.</p>
+                </div>
+            </div>
+            <button id="close-help-btn" class="w-full mt-6 bg-gray-500 text-white p-3 rounded-xl font-bold hover:bg-gray-600 transition">
+                Cerrar
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal de Importar Estudiantes -->
+    <div id="import-students-modal" class="modal-overlay fixed inset-0 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-lg slide-in shadow-2xl">
+            <h3 class="text-2xl font-bold mb-4 text-gray-800">📤 Importar Lista de Estudiantes</h3>
+            <p class="text-sm text-gray-600 mb-4">Pega una lista de nombres (uno por línea):</p>
+            <textarea id="import-students-textarea" rows="10" placeholder="Juan Pérez&#10;María García&#10;Carlos López..." 
+                      class="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition font-mono text-sm"></textarea>
+            <div class="flex gap-3 mt-4">
+                <button id="confirm-import-students-btn" class="flex-1 bg-green-500 text-white p-3 rounded-xl font-bold hover:bg-green-600 transition">
+                    ✅ Importar
+                </button>
+                <button id="cancel-import-students-btn" class="flex-1 bg-gray-500 text-white p-3 rounded-xl font-bold hover:bg-gray-600 transition">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== VARIABLES GLOBALES ====================
+        let db = { courses: {}, students: {}, attendance: {}, settings: {} };
+        let currentCourseId = null;
+        let currentAttendanceCourseId = null;
+        let html5QrCode = null;
+        let isScanning = false;
+        let isProcessingScan = false;
+        let scanCount = 0;
+        let recentScans = [];
+        let attendanceChart = null;
+
+        // Configuración por defecto
+        const defaultSettings = {
+            soundEnabled: true,
+            autoBackup: false,
+            scanCooldown: 2000
+        };
+
+        // ==================== INICIALIZACIÓN ====================
+        function initializeDB() {
+            try {
+                const stored = localStorage.getItem('ueser_db_v2');
+                if (stored) {
+                    db = JSON.parse(stored);
+                    if (!db.settings) db.settings = { ...defaultSettings };
+                } else {
+                    db = { courses: {}, students: {}, attendance: {}, settings: { ...defaultSettings } };
+                }
+                console.log('✅ Base de datos cargada');
+            } catch (error) {
+                console.error('❌ Error cargando datos:', error);
+                db = { courses: {}, students: {}, attendance: {}, settings: { ...defaultSettings } };
+                showNotification('Error cargando datos. Se inició nueva base de datos.', 'warning');
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('ueser_db_v2', JSON.stringify(db));
+                localStorage.setItem('ueser_last_update', new Date().toISOString());
+                console.log('💾 Datos guardados');
+            } catch (error) {
+                console.error('❌ Error guardando:', error);
+                showNotification('Error guardando datos. Verifica el espacio disponible.', 'error');
+            }
+        }
+
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+        }
+
+        // ==================== NOTIFICACIONES ====================
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            notification.className = `notification ${colors[type]} text-white p-4 rounded-xl shadow-2xl flex items-start gap-3`;
+            notification.innerHTML = `
+                <span class="text-2xl">${icons[type]}</span>
+                <div class="flex-1">
+                    <p class="font-semibold">${message}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-white hover:text-gray-200">✕</button>
+            `;
+            
+            container.appendChild(notification);
+            
+            if (db.settings.soundEnabled && type === 'success') {
+                playSound(type);
+            }
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 4000);
+        }
+
+        function playSound(type) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = type === 'success' ? 800 : 400;
+            gainNode.gain.value = 0.1;
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        // ==================== NAVEGACIÓN Y TABS ====================
+        function showTab(tabName) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('[id$="-section"]').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Mostrar sección seleccionada
+            document.getElementById(`${tabName}-section`).classList.remove('hidden');
+            
+            // Actualizar tabs activos
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Detener scanner si está activo
+            if (tabName !== 'attendance') {
+                stopScanner();
+            }
+
+            // Actualizar datos según la pestaña
+            if (tabName === 'dashboard') {
+                updateDashboard();
+            } else if (tabName === 'courses') {
+                renderCourses();
+            } else if (tabName === 'reports') {
+                updateReportFilters();
+            }
+        }
+
+        // Event listeners para tabs
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                showTab(button.dataset.tab);
+            });
+        });
+
+        // ==================== DASHBOARD Y ESTADÍSTICAS ====================
+        function updateDashboard() {
+            const totalCourses = Object.keys(db.courses).length;
+            const totalStudents = Object.keys(db.students).length;
+            const today = new Date().toISOString().split('T')[0];
+            let todayAttendance = 0;
+            
+            // Contar asistencias de hoy
+            for (const studentId in db.attendance) {
+                if (db.attendance[studentId][today]) {
+                    todayAttendance++;
+                }
+            }
+
+            // Calcular promedio de asistencia
+            let totalAttendances = 0;
+            let totalPossible = 0;
+            const allDates = new Set();
+            
+            for (const studentId in db.attendance) {
+                Object.keys(db.attendance[studentId]).forEach(date => allDates.add(date));
+            }
+            
+            allDates.forEach(date => {
+                totalPossible += totalStudents;
+                for (const studentId in db.attendance) {
+                    if (db.attendance[studentId][date]) totalAttendances++;
+                }
+            });
+
+            const avgPercentage = totalPossible > 0 ? ((totalAttendances / totalPossible) * 100).toFixed(1) : 0;
+
+            // Actualizar stats
+            document.getElementById('stat-courses').textContent = totalCourses;
+            document.getElementById('stat-students').textContent = totalStudents;
+            document.getElementById('stat-today').textContent = todayAttendance;
+            document.getElementById('stat-average').textContent = avgPercentage + '%';
+
+            // Actualizar gráfico
+            updateAttendanceChart();
+        }
+
+        function updateAttendanceChart() {
+            const ctx = document.getElementById('attendanceChart');
+            
+            // Obtener últimos 7 días
+            const labels = [];
+            const data = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                labels.push(date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }));
+                
+                let count = 0;
+                for (const studentId in db.attendance) {
+                    if (db.attendance[studentId][dateStr]) count++;
+                }
+                data.push(count);
+            }
+
+            if (attendanceChart) {
+                attendanceChart.destroy();
+            }
+
+            attendanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Asistencias',
+                        data: data,
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== GESTIÓN DE CURSOS ====================
+        function renderCourses() {
+            const courseList = document.getElementById('course-list');
+            const searchTerm = document.getElementById('search-courses').value.toLowerCase();
+            courseList.innerHTML = '';
+
+            const courses = Object.entries(db.courses).filter(([id, name]) => 
+                name.toLowerCase().includes(searchTerm)
+            );
+
+            if (courses.length === 0) {
+                courseList.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <div class="text-6xl mb-4">📚</div>
+                        <p class="text-lg font-semibold">No hay cursos ${searchTerm ? 'que coincidan' : 'creados'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            courses.forEach(([id, name]) => {
+                const studentsCount = Object.values(db.students).filter(s => s.courseId === id).length;
+                const teacherName = db.courses[`${id}_teacher`] || 'Sin asignar';
+                
+                const courseCard = document.createElement('div');
+                courseCard.className = 'bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100';
+                courseCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800 mb-1">${name}</h3>
+                            <p class="text-sm text-gray-600">👨‍🏫 ${teacherName}</p>
+                            <p class="text-sm text-gray-500 mt-2">👥 ${studentsCount} estudiantes</p>
+                        </div>
+                        <div class="text-4xl">📚</div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="viewStudents('${id}')" class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm font-semibold">
+                            Ver Estudiantes
+                        </button>
+                        <button onclick="generateCourseReport('${id}')" class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition text-sm font-semibold">
+                            📊 Reporte
+                        </button>
+                        <button onclick="deleteCourse('${id}')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm font-semibold">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+                courseList.appendChild(courseCard);
+            });
+        }
+
+        function viewStudents(courseId) {
+            currentCourseId = courseId;
+            document.getElementById('current-course-name').textContent = db.courses[courseId];
+            renderStudents();
+            
+            // Cambiar a sección de estudiantes
+            document.querySelectorAll('[id$="-section"]').forEach(section => section.classList.add('hidden'));
+            document.getElementById('students-section').classList.remove('hidden');
+        }
+
+        function deleteCourse(courseId) {
+            if (!confirm('¿Estás seguro de eliminar este curso y todos sus datos?')) return;
+            
+            delete db.courses[courseId];
+            delete db.courses[`${courseId}_teacher`];
+            
+            // Eliminar estudiantes y asistencia
+            for (const studentId in db.students) {
+                if (db.students[studentId].courseId === courseId) {
+                    delete db.students[studentId];
+                    delete db.attendance[studentId];
+                }
+            }
+            
+            saveData();
+            renderCourses();
+            updateDashboard();
+            showNotification('Curso eliminado correctamente', 'success');
+        }
+
+        // ==================== GESTIÓN DE ESTUDIANTES ====================
+        function renderStudents() {
+            const studentList = document.getElementById('student-list');
+            const searchTerm = document.getElementById('search-students').value.toLowerCase();
+            studentList.innerHTML = '';
+
+            const students = Object.values(db.students)
+                .filter(s => s.courseId === currentCourseId && s.name.toLowerCase().includes(searchTerm));
+
+            if (students.length === 0) {
+                studentList.innerHTML = `
+                    <div class="text-center py-12 text-gray-500">
+                        <div class="text-6xl mb-4">👥</div>
+                        <p class="text-lg font-semibold">No hay estudiantes ${searchTerm ? 'que coincidan' : 'en este curso'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            students.forEach(student => {
+                const attendanceCount = db.attendance[student.id] ? Object.keys(db.attendance[student.id]).length : 0;
+                
+                const studentCard = document.createElement('div');
+                studentCard.className = 'bg-white rounded-xl p-5 shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100';
+                studentCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 text-lg mb-1">${student.name}</h4>
+                            <p class="text-sm text-gray-500">ID: ${student.id}</p>
+                            ${student.email ? `<p class="text-sm text-gray-600">📧 ${student.email}</p>` : ''}
+                            <p class="text-sm text-green-600 font-semibold mt-2">✅ ${attendanceCount} asistencias</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="showStudentQR('${student.id}')" class="bg-blue-100 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-200 transition text-sm font-semibold whitespace-nowrap">
+                                📱 Ver QR
+                            </button>
+                            <button onclick="deleteStudent('${student.id}')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition text-sm font-semibold">
+                                🗑️ Eliminar
+                            </button>
+                        </div>
+                    </div>
+                    <div id="qr-container-${student.id}" class="hidden mt-4 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl text-center">
+                        <div id="qr-code-${student.id}" class="inline-block mb-3"></div>
+                        <p class="font-semibold text-gray-800 mb-3">${student.name}</p>
+                        <button onclick="downloadStudentQR('${student.id}')" class="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition font-semibold">
+                            💾 Descargar QR
+                        </button>
+                    </div>
+                `;
+                studentList.appendChild(studentCard);
+            });
+        }
+
+        function showStudentQR(studentId) {
+            const container = document.getElementById(`qr-container-${studentId}`);
+            const qrDiv = document.getElementById(`qr-code-${studentId}`);
+            
+            container.classList.toggle('hidden');
+            
+            if (!container.classList.contains('hidden') && qrDiv.innerHTML === '') {
+                const student = db.students[studentId];
+                const qrData = `${studentId}_${student.courseId}`;
+                
+                new QRCode(qrDiv, {
+                    text: qrData,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            }
+        }
+
+        function downloadStudentQR(studentId) {
+            const student = db.students[studentId];
+            const qrCanvas = document.querySelector(`#qr-code-${studentId} canvas`);
+            
+            if (!qrCanvas) {
+                showNotification('Primero debes ver el código QR', 'warning');
+                return;
+            }
+
+            const finalCanvas = document.createElement('canvas');
+            const ctx = finalCanvas.getContext('2d');
+            const padding = 20;
+            const textHeight = 40;
+            
+            finalCanvas.width = qrCanvas.width + (padding * 2);
+            finalCanvas.height = qrCanvas.height + textHeight + (padding * 2);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+            ctx.drawImage(qrCanvas, padding, padding);
+            
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(student.name, finalCanvas.width / 2, finalCanvas.height - padding);
+            
+            const link = document.createElement('a');
+            link.download = `QR_${student.name.replace(/\s/g, '_')}.png`;
+            link.href = finalCanvas.toDataURL('image/png');
+            link.click();
+            
+            showNotification(`QR de ${student.name} descargado`, 'success');
+        }
+
+        function deleteStudent(studentId) {
+            if (!confirm('¿Eliminar este estudiante y sus registros?')) return;
+            
+            delete db.students[studentId];
+            delete db.attendance[studentId];
+            saveData();
+            renderStudents();
+            updateDashboard();
+            showNotification('Estudiante eliminado', 'success');
+        }
+
+        // ==================== ASISTENCIA Y SCANNER ====================
+        function updateCourseSelector() {
+            const select = document.getElementById('attendance-course-select');
+            select.innerHTML = '<option value="">-- Seleccionar curso --</option>';
+            
+            for (const id in db.courses) {
+                const studentsCount = Object.values(db.students).filter(s => s.courseId === id).length;
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `${db.courses[id]} (${studentsCount} estudiantes)`;
+                select.appendChild(option);
+            }
+        }
+
+        function startScanner() {
+            if (isScanning) {
+                stopScanner();
+                return;
+            }
+
+            html5QrCode = new Html5Qrcode("qr-reader");
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+
+            document.getElementById('scan-status').textContent = '🔄 Iniciando cámara...';
+            document.getElementById('start-scan-btn').disabled = true;
+
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, () => {})
+                .then(() => {
+                    isScanning = true;
+                    document.getElementById('scan-tips').classList.remove('hidden');
+                    document.getElementById('start-scan-btn').textContent = '⏹️ Detener Escáner';
+                    document.getElementById('start-scan-btn').className = 'flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition';
+                    document.getElementById('start-scan-btn').disabled = false;
+                    document.getElementById('scan-status').textContent = '📱 Listo para escanear';
+                    updateCameraStatus('success');
+                })
+                .catch(err => {
+                    console.error('Error:', err);
+                    document.getElementById('start-scan-btn').disabled = false;
+                    let errorMsg = '❌ Error al iniciar cámara';
+                    
+                    if (err.name === "NotAllowedError") {
+                        errorMsg = '🚫 Permiso de cámara denegado';
+                    } else if (location.protocol === 'http:' && location.hostname !== 'localhost') {
+                        errorMsg = '🔒 Se requiere HTTPS para usar la cámara';
+                    }
+                    
+                    document.getElementById('scan-status').textContent = errorMsg;
+                    updateCameraStatus('error');
+                    showNotification(errorMsg, 'error');
+                });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && isScanning) {
+                html5QrCode.stop().then(() => {
+                    isScanning = false;
+                    document.getElementById('scan-tips').classList.add('hidden');
+                    document.getElementById('start-scan-btn').textContent = '📷 Iniciar Escáner';
+                    document.getElementById('start-scan-btn').className = 'flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition';
+                    document.getElementById('scan-status').textContent = '📷 Escáner detenido';
+                    document.getElementById('qr-reader').innerHTML = '';
+                    updateCameraStatus('stopped');
+                });
+            }
+        }
+
+        function updateCameraStatus(status) {
+            const statusEl = document.getElementById('camera-status');
+            const messages = {
+                success: { text: '🟢 Cámara activa y lista', class: 'bg-green-100 text-green-700 border-2 border-green-200' },
+                error: { text: '🔴 Error de cámara', class: 'bg-red-100 text-red-700 border-2 border-red-200' },
+                stopped: { text: '⚫ Cámara detenida', class: 'bg-gray-100 text-gray-700 border-2 border-gray-200' }
+            };
+            
+            const msg = messages[status] || messages.stopped;
+            statusEl.textContent = msg.text;
+            statusEl.className = `mb-4 p-3 rounded-xl text-sm font-semibold ${msg.class}`;
+        }
+
+        function onScanSuccess(decodedText) {
+            if (!isScanning || isProcessingScan) return;
+            
+            isProcessingScan = true;
+            processAttendance(decodedText);
+        }
+
+        function processAttendance(qrData) {
+            const parts = qrData.split('_');
+            if (parts.length < 2) {
+                showNotification('❌ Código QR inválido', 'error');
+                setTimeout(() => { isProcessingScan = false; }, db.settings.scanCooldown);
+                return;
+            }
+
+            const studentId = parts[0];
+            const courseId = parts[1];
+
+            if (courseId !== currentAttendanceCourseId) {
+                showNotification('⚠️ QR de curso incorrecto', 'warning');
+                setTimeout(() => { isProcessingScan = false; }, db.settings.scanCooldown);
+                return;
+            }
+
+            const student = db.students[studentId];
+            if (!student) {
+                showNotification('❌ Estudiante no encontrado', 'error');
+                setTimeout(() => { isProcessingScan = false; }, db.settings.scanCooldown);
+                return;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+            if (!db.attendance[studentId]) {
+                db.attendance[studentId] = {};
+            }
+
+            if (db.attendance[studentId][today]) {
+                showNotification(`ℹ️ ${student.name} ya registrado hoy`, 'info');
+            } else {
+                db.attendance[studentId][today] = true;
+                saveData();
+                scanCount++;
+                document.getElementById('scan-count').textContent = scanCount;
+                addRecentScan(student.name);
+                showNotification(`✅ ${student.name} - Asistencia registrada`, 'success');
+                updateDashboard();
+            }
+            
+            setTimeout(() => {
+                document.getElementById('scan-status').textContent = '📱 Listo para el siguiente código';
+                isProcessingScan = false;
+            }, db.settings.scanCooldown);
+        }
+
+        function addRecentScan(studentName) {
+            recentScans.unshift({
+                name: studentName,
+                time: new Date().toLocaleTimeString('es-ES')
+            });
+            
+            if (recentScans.length > 10) recentScans.pop();
+            
+            const list = document.getElementById('recent-scans-list');
+            list.innerHTML = recentScans.map(scan => `
+                <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                    <span class="font-semibold text-green-800">${scan.name}</span>
+                    <span class="text-sm text-green-600">${scan.time}</span>
+                </div>
+            `).join('');
+        }
+
+        // ==================== REPORTES ====================
+        function updateReportFilters() {
+            const select = document.getElementById('report-course-select');
+            select.innerHTML = '<option value="">Todos los cursos</option>';
+            
+            for (const id in db.courses) {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = db.courses[id];
+                select.appendChild(option);
+            }
+
+            // Establecer fechas por defecto
+            const today = new Date().toISOString().split('T')[0];
+            const lastMonth = new Date();
+            lastMonth.setMonth(lastMonth.getMonth() - 1);
+            
+            document.getElementById('report-date-to').value = today;
+            document.getElementById('report-date-from').value = lastMonth.toISOString().split('T')[0];
+        }
+
+        function generateCourseReport(courseId) {
+            const courseName = db.courses[courseId];
+            const students = Object.values(db.students).filter(s => s.courseId === courseId);
+            
+            if (students.length === 0) {
+                showNotification('No hay estudiantes en este curso', 'warning');
+                return;
+            }
+
+            // Recopilar fechas
+            const allDates = new Set();
+            students.forEach(student => {
+                if (db.attendance[student.id]) {
+                    Object.keys(db.attendance[student.id]).forEach(date => allDates.add(date));
+                }
+            });
+
+            const sortedDates = Array.from(allDates).sort();
+
+            if (sortedDates.length === 0) {
+                showNotification('No hay registros de asistencia', 'warning');
+                return;
+            }
+
+            // Preparar datos
+            const reportData = students.map(student => {
+                const row = {
+                    'Nombre': student.name,
+                    'ID': student.id,
+                    'Email': student.email || 'N/A'
+                };
+                
+                let totalPresent = 0;
+                sortedDates.forEach(date => {
+                    const attended = db.attendance[student.id] && db.attendance[student.id][date];
+                    row[date] = attended ? 'Presente' : 'Ausente';
+                    if (attended) totalPresent++;
+                });
+                
+                row['Total Presentes'] = totalPresent;
+                row['Total Ausentes'] = sortedDates.length - totalPresent;
+                row['% Asistencia'] = `${((totalPresent / sortedDates.length) * 100).toFixed(1)}%`;
+                
+                return row;
+            });
+
+            // Generar Excel
+            const worksheet = XLSX.utils.json_to_sheet(reportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Asistencia');
+
+            const fileName = `Reporte_${courseName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+            
+            showNotification(`📊 Reporte "${courseName}" descargado`, 'success');
+        }
+
+        function downloadAllQRs() {
+            if (!currentCourseId) return;
+            
+            const students = Object.values(db.students).filter(s => s.courseId === currentCourseId);
+            if (students.length === 0) {
+                showNotification('No hay estudiantes para exportar', 'warning');
+                return;
+            }
+
+            showNotification(`Generando ${students.length} códigos QR...`, 'info');
+            
+            // Crear un canvas grande para todos los QR
+            const qrSize = 200;
+            const padding = 20;
+            const cols = 3;
+            const rows = Math.ceil(students.length / cols);
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = (qrSize + padding) * cols + padding;
+            canvas.height = (qrSize + padding + 40) * rows + padding;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            students.forEach((student, index) => {
+                const row = Math.floor(index / cols);
+                const col = index % cols;
+                const x = padding + col * (qrSize + padding);
+                const y = padding + row * (qrSize + padding + 40);
+                
+                // Generar QR temporal
+                const tempDiv = document.createElement('div');
+                const qrData = `${student.id}_${student.courseId}`;
+                new QRCode(tempDiv, {
+                    text: qrData,
+                    width: qrSize,
+                    height: qrSize,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                setTimeout(() => {
+                    const qrCanvas = tempDiv.querySelector('canvas');
+                    ctx.drawImage(qrCanvas, x, y);
+                    
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(student.name, x + qrSize / 2, y + qrSize + 25);
+                    
+                    if (index === students.length - 1) {
+                        // Descargar cuando se complete el último
+                        const link = document.createElement('a');
+                        link.download = `QR_Lote_${db.courses[currentCourseId]}_${new Date().toISOString().split('T')[0]}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        showNotification('✅ Todos los QR descargados', 'success');
+                    }
+                }, index * 100);
+            });
+        }
+
+        // ==================== CONFIGURACIÓN ====================
+        function exportAllData() {
+            const dataToExport = {
+                version: "2.0",
+                exportDate: new Date().toISOString(),
+                data: db
+            };
+            
+            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.download = `UESER_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            
+            showNotification('📤 Datos exportados correctamente', 'success');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (imported.data && confirm('¿Importar datos? Esto reemplazará toda la información actual.')) {
+                            db = imported.data;
+                            saveData();
+                            updateDashboard();
+                            renderCourses();
+                            showNotification('📥 Datos importados exitosamente', 'success');
+                        }
+                    } catch (error) {
+                        showNotification('❌ Error al importar datos', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function resetSystem() {
+            if (!confirm('⚠️ ¿RESETEAR TODO EL SISTEMA? Esta acción no se puede deshacer.')) return;
+            if (!confirm('¿Estás completamente seguro? Se perderán todos los datos.')) return;
+            
+            localStorage.clear();
+            location.reload();
+        }
+
+        function updateSystemInfo() {
+            const lastUpdate = localStorage.getItem('ueser_last_update');
+            const dataSize = new Blob([JSON.stringify(db)]).size;
+            
+            document.getElementById('last-update').textContent = lastUpdate ? 
+                new Date(lastUpdate).toLocaleString('es-ES') : 'Nunca';
+            document.getElementById('data-size').textContent = (dataSize / 1024).toFixed(2) + ' KB';
+            document.getElementById('browser-info').textContent = navigator.userAgent.split(' ').pop();
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        
+        // Cursos
+        document.getElementById('add-course-btn').addEventListener('click', () => {
+            const name = document.getElementById('course-name-input').value.trim();
+            const teacher = document.getElementById('course-teacher-input').value.trim();
+            
+            if (!name) {
+                showNotification('⚠️ Ingresa un nombre para el curso', 'warning');
+                return;
+            }
+            
+            const id = generateUniqueId();
+            db.courses[id] = name;
+            if (teacher) db.courses[`${id}_teacher`] = teacher;
+            
+            saveData();
+            document.getElementById('course-name-input').value = '';
+            document.getElementById('course-teacher-input').value = '';
+            renderCourses();
+            updateDashboard();
+            showNotification(`📚 Curso "${name}" creado`, 'success');
+        });
+
+        document.getElementById('search-courses').addEventListener('input', renderCourses);
+
+        // Estudiantes
+        document.getElementById('add-student-btn').addEventListener('click', () => {
+            const name = document.getElementById('student-name-input').value.trim();
+            const email = document.getElementById('student-email-input').value.trim();
+            
+            if (!name || !currentCourseId) {
+                showNotification('⚠️ Ingresa un nombre para el estudiante', 'warning');
+                return;
+            }
+            
+            const id = generateUniqueId();
+            db.students[id] = { id, name, courseId: currentCourseId, email };
+            
+            saveData();
+            document.getElementById('student-name-input').value = '';
+            document.getElementById('student-email-input').value = '';
+            renderStudents();
+            updateDashboard();
+            showNotification(`👥 Estudiante "${name}" agregado`, 'success');
+        });
+
+        document.getElementById('search-students').addEventListener('input', renderStudents);
+        document.getElementById('back-to-courses-btn').addEventListener('click', () => showTab('courses'));
+        document.getElementById('download-all-qr-btn').addEventListener('click', downloadAllQRs);
+
+        // Importar estudiantes
+        document.getElementById('import-students-btn').addEventListener('click', () => {
+            document.getElementById('import-students-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-import-students-btn').addEventListener('click', () => {
+            document.getElementById('import-students-modal').classList.add('hidden');
+        });
+
+        document.getElementById('confirm-import-students-btn').addEventListener('click', () => {
+            const textarea = document.getElementById('import-students-textarea');
+            const names = textarea.value.split('\n').filter(n => n.trim());
+            
+            if (names.length === 0) {
+                showNotification('⚠️ No hay nombres para importar', 'warning');
+                return;
+            }
+
+            names.forEach(name => {
+                const id = generateUniqueId();
+                db.students[id] = { id, name: name.trim(), courseId: currentCourseId, email: '' };
+            });
+
+            saveData();
+            renderStudents();
+            updateDashboard();
+            textarea.value = '';
+            document.getElementById('import-students-modal').classList.add('hidden');
+            showNotification(`✅ ${names.length} estudiantes importados`, 'success');
+        });
+
+        // Asistencia
+        document.getElementById('attendance-course-select').addEventListener('change', (e) => {
+            currentAttendanceCourseId = e.target.value;
+            if (currentAttendanceCourseId) {
+                document.getElementById('scanner-container').classList.remove('hidden');
+                document.getElementById('scanning-course-name').textContent = db.courses[currentAttendanceCourseId];
+                scanCount = 0;
+                recentScans = [];
+                document.getElementById('scan-count').textContent = '0';
+                document.getElementById('recent-scans-list').innerHTML = '';
+            } else {
+                document.getElementById('scanner-container').classList.add('hidden');
+                stopScanner();
+            }
+        });
+
+        document.getElementById('start-scan-btn').addEventListener('click', startScanner);
+
+        // Registro manual
+        document.getElementById('manual-attendance-btn').addEventListener('click', () => {
+            const select = document.getElementById('manual-student-select');
+            select.innerHTML = '<option value="">-- Seleccionar estudiante --</option>';
+            
+            Object.values(db.students)
+                .filter(s => s.courseId === currentAttendanceCourseId)
+                .forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = student.name;
+                    select.appendChild(option);
+                });
+            
+            document.getElementById('manual-date-input').value = new Date().toISOString().split('T')[0];
+            document.getElementById('manual-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancel-manual-btn').addEventListener('click', () => {
+            document.getElementById('manual-modal').classList.add('hidden');
+        });
+
+        document.getElementById('confirm-manual-btn').addEventListener('click', () => {
+            const studentId = document.getElementById('manual-student-select').value;
+            const date = document.getElementById('manual-date-input').value;
+            
+            if (!studentId || !date) {
+                showNotification('⚠️ Selecciona estudiante y fecha', 'warning');
+                return;
+            }
+
+            if (!db.attendance[studentId]) db.attendance[studentId] = {};
+            db.attendance[studentId][date] = true;
+            saveData();
+            updateDashboard();
+            
+            document.getElementById('manual-modal').classList.add('hidden');
+            showNotification('✅ Asistencia registrada manualmente', 'success');
+        });
+
+        // Reportes
+        document.getElementById('download-excel-report-btn').addEventListener('click', () => {
+            const courseId = document.getElementById('report-course-select').value;
+            if (courseId) {
+                generateCourseReport(courseId);
+            } else {
+                showNotification('⚠️ Selecciona un curso primero', 'warning');
+            }
+        });
+
+        // Configuración
+        document.getElementById('export-all-data-btn').addEventListener('click', exportAllData);
+        document.getElementById('import-data-btn').addEventListener('click', importData);
+        document.getElementById('reset-all-btn').addEventListener('click', resetSystem);
+
+        document.getElementById('sound-toggle').addEventListener('change', (e) => {
+            db.settings.soundEnabled = e.target.checked;
+            saveData();
+        });
+
+        document.getElementById('autobackup-toggle').addEventListener('change', (e) => {
+            db.settings.autoBackup = e.target.checked;
+            saveData();
+        });
+
+        document.getElementById('scan-cooldown-range').addEventListener('input', (e) => {
+            const value = e.target.value;
+            document.getElementById('cooldown-value').textContent = value;
+            db.settings.scanCooldown = value * 1000;
+            saveData();
+        });
+
+        // Acciones rápidas del dashboard
+        document.getElementById('quick-scan-btn').addEventListener('click', () => {
+            showTab('attendance');
+            updateCourseSelector();
+        });
+
+        document.getElementById('quick-courses-btn').addEventListener('click', () => showTab('courses'));
+        document.getElementById('quick-reports-btn').addEventListener('click', () => showTab('reports'));
+
+        // Ayuda
+        document.getElementById('help-btn').addEventListener('click', () => {
+            document.getElementById('help-modal').classList.remove('hidden');
+        });
+
+        document.getElementById('close-help-btn').addEventListener('click', () => {
+            document.getElementById('help-modal').classList.add('hidden');
+        });
+
+        // Cerrar modales al hacer clic fuera
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+        });
+
+        // Enter en inputs
+        document.getElementById('course-name-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('add-course-btn').click();
+        });
+
+        document.getElementById('student-name-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('add-student-btn').click();
+        });
+
+        // Teclas de atajo
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                stopScanner();
+                document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+            }
+        });
+
+        // ==================== INICIALIZACIÓN ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verificar seguridad
+            const securityBadge = document.getElementById('security-badge');
+            if (location.protocol === 'https:' || location.hostname === 'localhost') {
+                securityBadge.querySelector('#security-text').textContent = '🔒 Conexión Segura';
+            } else {
+                securityBadge.querySelector('#security-text').textContent = '⚠️ Requiere HTTPS';
+                securityBadge.className = 'text-xs bg-yellow-500/30 px-3 py-2 rounded-lg';
+            }
+
+            // Inicializar
+            initializeDB();
+            updateDashboard();
+            renderCourses();
+            updateCourseSelector();
+            updateSystemInfo();
+            
+            // Cargar configuración
+            document.getElementById('sound-toggle').checked = db.settings.soundEnabled;
+            document.getElementById('autobackup-toggle').checked = db.settings.autoBackup;
+            const cooldownSeconds = db.settings.scanCooldown / 1000;
+            document.getElementById('scan-cooldown-range').value = cooldownSeconds;
+            document.getElementById('cooldown-value').textContent = cooldownSeconds;
+
+            // Mostrar dashboard
+            showTab('dashboard');
+            
+            // Mensaje de bienvenida
+            setTimeout(() => {
+                if (Object.keys(db.courses).length === 0) {
+                    showNotification('👋 ¡Bienvenido! Crea tu primer curso para comenzar', 'info');
+                }
+            }, 1000);
+        });
+
+        // Exponer funciones globales necesarias
+        window.viewStudents = viewStudents;
+        window.deleteCourse = deleteCourse;
+        window.generateCourseReport = generateCourseReport;
+        window.showStudentQR = showStudentQR;
+        window.downloadStudentQR = downloadStudentQR;
+        window.deleteStudent = deleteStudent;
+
+        // Limpiar recursos al cerrar
+        window.addEventListener('beforeunload', () => {
+            if (isScanning) stopScanner();
+        });
+    </script>
+
+</body>
+</html>
