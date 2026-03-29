@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#667eea">
+    <title>Control de Asistencia UESER</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: pan-y;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            background: white;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 16px 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.3em;
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+
+        .header p {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-around;
+            background: #f8f9fa;
+            padding: 8px 4px;
+            border-bottom: 1px solid #e9ecef;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            position: sticky;
+            top: 80px;
+            z-index: 99;
+        }
+
+        .nav::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .nav::-webkit-scrollbar-thumb {
+            background: #007bff;
+            border-radius: 3px;
+        }
+
+        .nav-btn {
+            padding: 10px 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85em;
+            white-space: nowrap;
+            min-width: 70px;
+            flex-shrink: 0;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .content {
+            padding: 12px;
+            min-height: calc(100vh - 200px);
+            padding-bottom: 60px;
+        }
+
+        .section h2 {
+            font-size: 1.4em;
+            margin-bottom: 16px;
+            color: #2c3e50;
+        }
+
+        .section h3 {
+            font-size: 1.1em;
+            margin: 16px 0 8px 0;
+            color: #34495e;
+        }
+
+        .section h4 {
+            font-size: 1em;
+            margin: 8px 0;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .form-group select {
+            background: white;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 24px;
+            padding-right: 36px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            margin: 6px 4px;
+            transition: all 0.3s;
+            font-weight: 600;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .course-card, .student-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+
+        .course-card:hover, .student-card:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+        }
+
+        .qr-container {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        #qr-code {
+            margin: 10px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+            padding: 10px;
+        }
+        
+        #qr-code img {
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 10px;
+            background: white;
+            max-width: 100%;
+            height: auto;
+        }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        #video {
+            width: 100%;
+            border-radius: 10px;
+            border: 2px solid #007bff;
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            pointer-events: none;
+        }
+
+        .attendance-record {
+            background: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 20px;
+            width: 32px;
+            height: 32px;
+            text-align: center;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .stat-number {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .stat-card div:last-child {
+            font-size: 0.9em;
+            opacity: 0.95;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.2em;
+            }
+            
+            .header p {
+                font-size: 0.8em;
+            }
+            
+            .nav {
+                padding: 6px 4px;
+                gap: 6px;
+            }
+            
+            .nav-btn {
+                padding: 8px 10px;
+                font-size: 0.8em;
+                min-width: 60px;
+            }
+            
+            .content {
+                padding: 10px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .stat-number {
+                font-size: 2em;
+            }
+            
+            .btn {
+                width: 100%;
+                margin: 6px 0;
+            }
+            
+            .form-group input, 
+            .form-group select {
+                font-size: 16px;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 20% auto;
+                padding: 16px;
+            }
+            
+            #qr-code img {
+                max-width: 100%;
+                height: auto;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .header h1 {
+                font-size: 1em;
+            }
+            
+            .nav-btn {
+                padding: 7px 8px;
+                font-size: 0.75em;
+                min-width: 55px;
+            }
+            
+            .stat-number {
+                font-size: 1.8em;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .container {
+                max-width: 768px;
+                margin: 0 auto;
+                border-radius: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .export-section {
+            background: #f8f9fa;
+            padding: 14px;
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+
+        .export-section h3 {
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        /* Mejoras táctiles */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button, a, .course-card, .student-card {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* Prevenir zoom en inputs */
+        input[type="text"],
+        input[type="date"],
+        select {
+            font-size: 16px !important;
+        }
+
+        /* Scroll suave */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Sistema de Control de Asistencia UESER</h1>
+            <p>Gestión integral de asistencia estudiantil con códigos QR</p>
+        </div>
+
+        <div class="nav">
+            <button class="nav-btn active" onclick="showSection('dashboard')">Dashboard</button>
+            <button class="nav-btn" onclick="showSection('courses')">Gestión de Cursos</button>
+            <button class="nav-btn" onclick="showSection('students')">Gestión de Estudiantes</button>
+            <button class="nav-btn" onclick="showSection('attendance')">Tomar Asistencia</button>
+            <button class="nav-btn" onclick="showSection('reports')">Reportes</button>
+        </div>
+
+        <div class="content">
+            <!-- Dashboard -->
+            <div id="dashboard" class="section active">
+                <h2>📊 Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-courses">0</div>
+                        <div>Cursos Registrados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-students">0</div>
+                        <div>Estudiantes Registrados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="today-attendance">0</div>
+                        <div>Asistencias Hoy</div>
+                    </div>
+                </div>
+                
+                <div class="export-section">
+                    <h3>📊 Exportar Datos</h3>
+                    <button class="btn btn-warning" onclick="exportToJSON()">Exportar Datos (JSON)</button>
+                    <button class="btn btn-warning" onclick="exportAttendanceReport()">Exportar Reporte de Asistencia</button>
+                    <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                    <button class="btn" onclick="document.getElementById('import-file').click()">Importar Datos</button>
+                </div>
+            </div>
+
+            <!-- Cursos -->
+            <div id="courses" class="section">
+                <h2>📚 Gestión de Cursos</h2>
+                <div class="form-group">
+                    <label for="course-name">Nombre del Curso:</label>
+                    <input type="text" id="course-name" placeholder="Ej: 1ro Bachillerato A">
+                </div>
+                <div class="form-group">
+                    <label for="course-year">Año Académico:</label>
+                    <input type="text" id="course-year" placeholder="Ej: 2024-2025">
+                </div>
+                <button class="btn" onclick="addCourse()">➕ Agregar Curso</button>
+                
+                <div id="courses-list"></div>
+            </div>
+
+            <!-- Estudiantes -->
+            <div id="students" class="section">
+                <h2>👥 Gestión de Estudiantes</h2>
+                <div class="form-group">
+                    <label for="student-course">Seleccionar Curso:</label>
+                    <select id="student-course"></select>
+                </div>
+                <div class="form-group">
+                    <label for="student-name">Nombre del Estudiante:</label>
+                    <input type="text" id="student-name" placeholder="Nombre completo">
+                </div>
+                <div class="form-group">
+                    <label for="student-id">Cédula/ID:</label>
+                    <input type="text" id="student-id" placeholder="Número de identificación">
+                </div>
+                <button class="btn" onclick="addStudent()">➕ Agregar Estudiante</button>
+                
+                <div id="students-list"></div>
+            </div>
+
+            <!-- Asistencia -->
+            <div id="attendance" class="section">
+                <h2>📷 Tomar Asistencia</h2>
+                <div class="form-group">
+                    <label for="attendance-course">Seleccionar Curso:</label>
+                    <select id="attendance-course" onchange="loadCourseForAttendance()"></select>
+                </div>
+                
+                <div style="text-align: center; margin: 20px 0;">
+                    <button class="btn" onclick="startScanner()">📷 Iniciar Escáner QR</button>
+                    <button class="btn btn-danger" onclick="stopScanner()">⏹️ Detener Escáner</button>
+                </div>
+                
+                <div id="video-container" style="display: none;">
+                    <video id="video" autoplay></video>
+                    <div class="scan-overlay"></div>
+                </div>
+                
+                <div id="attendance-list"></div>
+            </div>
+
+            <!-- Reportes -->
+            <div id="reports" class="section">
+                <h2>📋 Reportes de Asistencia</h2>
+                <div class="form-group">
+                    <label for="report-course">Seleccionar Curso:</label>
+                    <select id="report-course" onchange="generateReport()"></select>
+                </div>
+                <div class="form-group">
+                    <label for="report-date">Fecha:</label>
+                    <input type="date" id="report-date" onchange="generateReport()">
+                </div>
+                
+                <div id="report-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar QR -->
+    <div id="qr-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeQRModal()">&times;</span>
+            <h3 id="qr-student-name"></h3>
+            <div class="qr-container">
+                <div id="qr-code"></div>
+                <div style="margin-top: 15px;">
+                    <button class="btn" onclick="downloadQR()">💾 Descargar QR</button>
+                    <button class="btn btn-warning" onclick="shareQR()">📱 Compartir QR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bibliotecas QR desde CDN confiable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <script>
+        // Verificar que las librerías QR estén cargadas
+        window.addEventListener('load', function() {
+            if (typeof QRCode === 'undefined') {
+                console.error('Biblioteca QRCode no cargada');
+                alert('Error: No se pudo cargar la biblioteca de códigos QR. Verifique su conexión a internet.');
+            } else {
+                console.log('Biblioteca QRCode cargada correctamente');
+            }
+            
+            if (typeof jsQR === 'undefined') {
+                console.error('Biblioteca jsQR no cargada');
+                alert('Error: No se pudo cargar la biblioteca de escaneo QR. Verifique su conexión a internet.');
+            } else {
+                console.log('Biblioteca jsQR cargada correctamente');
+            }
+        });
+        // Base de datos local usando localStorage
+        class AttendanceDB {
+            constructor() {
+                this.courses = this.getData('courses') || [];
+                this.students = this.getData('students') || [];
+                this.attendance = this.getData('attendance') || [];
+            }
+
+            getData(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key));
+                } catch {
+                    return null;
+                }
+            }
+
+            saveData(key, data) {
+                localStorage.setItem(key, JSON.stringify(data));
+            }
+
+            addCourse(course) {
+                course.id = Date.now().toString();
+                this.courses.push(course);
+                this.saveData('courses', this.courses);
+                return course.id;
+            }
+
+            addStudent(student) {
+                student.id = Date.now().toString();
+                student.qrCode = this.generateQRCode(student);
+                this.students.push(student);
+                this.saveData('students', this.students);
+                return student;
+            }
+
+            generateQRCode(student) {
+                // Crear datos más simples y legibles para el QR
+                const qrData = {
+                    id: student.id,
+                    name: student.name,
+                    studentId: student.studentId,
+                    courseId: student.courseId,
+                    type: 'UESER_STUDENT'
+                };
+                return JSON.stringify(qrData);
+            }
+
+            addAttendance(studentId, courseId) {
+                const attendance = {
+                    id: Date.now().toString(),
+                    studentId,
+                    courseId,
+                    date: new Date().toISOString().split('T')[0],
+                    time: new Date().toLocaleTimeString(),
+                    timestamp: Date.now()
+                };
+                this.attendance.push(attendance);
+                this.saveData('attendance', this.attendance);
+                return attendance;
+            }
+
+            getCourseStudents(courseId) {
+                return this.students.filter(s => s.courseId === courseId);
+            }
+
+            getAttendanceByDate(courseId, date) {
+                return this.attendance.filter(a => 
+                    a.courseId === courseId && a.date === date
+                );
+            }
+
+            deleteCourse(courseId) {
+                this.courses = this.courses.filter(c => c.id !== courseId);
+                this.students = this.students.filter(s => s.courseId !== courseId);
+                this.attendance = this.attendance.filter(a => a.courseId !== courseId);
+                this.saveData('courses', this.courses);
+                this.saveData('students', this.students);
+                this.saveData('attendance', this.attendance);
+            }
+
+            deleteStudent(studentId) {
+                this.students = this.students.filter(s => s.id !== studentId);
+                this.attendance = this.attendance.filter(a => a.studentId !== studentId);
+                this.saveData('students', this.students);
+                this.saveData('attendance', this.attendance);
+            }
+        }
+
+        const db = new AttendanceDB();
+        let currentStream = null;
+        let currentQRData = null;
+        let scannerActive = false;
+
+        // Navegación
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (sectionId === 'dashboard') updateDashboard();
+            if (sectionId === 'courses') loadCourses();
+            if (sectionId === 'students') loadStudentsSection();
+            if (sectionId === 'attendance') loadAttendanceSection();
+            if (sectionId === 'reports') loadReportsSection();
+        }
+
+        // Dashboard
+        function updateDashboard() {
+            document.getElementById('total-courses').textContent = db.courses.length;
+            document.getElementById('total-students').textContent = db.students.length;
+            
+            const today = new Date().toISOString().split('T')[0];
+            const todayAttendance = db.attendance.filter(a => a.date === today);
+            document.getElementById('today-attendance').textContent = todayAttendance.length;
+        }
+
+        // Gestión de Cursos
+        function addCourse() {
+            const name = document.getElementById('course-name').value.trim();
+            const year = document.getElementById('course-year').value.trim();
+            
+            if (!name || !year) {
+                alert('Por favor complete todos los campos');
+                return;
+            }
+
+            db.addCourse({ name, year });
+            document.getElementById('course-name').value = '';
+            document.getElementById('course-year').value = '';
+            loadCourses();
+            updateStudentCourseSelects();
+            alert('Curso agregado exitosamente');
+        }
+
+        function loadCourses() {
+            const container = document.getElementById('courses-list');
+            container.innerHTML = '';
+            
+            db.courses.forEach(course => {
+                const courseCard = document.createElement('div');
+                courseCard.className = 'course-card';
+                courseCard.innerHTML = `
+                    <h3>📚 ${course.name}</h3>
+                    <p><strong>Año Académico:</strong> ${course.year}</p>
+                    <p><strong>Estudiantes:</strong> ${db.getCourseStudents(course.id).length}/30</p>
+                    <button class="btn btn-danger" onclick="deleteCourse('${course.id}')">🗑️ Eliminar</button>
+                `;
+                container.appendChild(courseCard);
+            });
+        }
+
+        function deleteCourse(courseId) {
+            if (confirm('¿Está seguro de eliminar este curso? Se eliminarán todos los estudiantes y registros de asistencia asociados.')) {
+                db.deleteCourse(courseId);
+                loadCourses();
+                updateStudentCourseSelects();
+                alert('Curso eliminado exitosamente');
+            }
+        }
+
+        // Gestión de Estudiantes
+        function addStudent() {
+            const courseId = document.getElementById('student-course').value;
+            const name = document.getElementById('student-name').value.trim();
+            const studentId = document.getElementById('student-id').value.trim();
+            
+            if (!courseId || !name || !studentId) {
+                alert('Por favor complete todos los campos');
+                return;
+            }
+
+            const courseStudents = db.getCourseStudents(courseId);
+            if (courseStudents.length >= 30) {
+                alert('El curso ya tiene el máximo de 30 estudiantes');
+                return;
+            }
+
+            if (db.students.some(s => s.studentId === studentId)) {
+                alert('Ya existe un estudiante con esta cédula/ID');
+                return;
+            }
+
+            const student = db.addStudent({ courseId, name, studentId });
+            
+            // Limpiar campos
+            document.getElementById('student-name').value = '';
+            document.getElementById('student-id').value = '';
+            
+            loadStudentsList();
+            
+            // Mostrar mensaje de éxito con opción de ver QR
+            if (confirm(`Estudiante agregado exitosamente.\n¿Desea ver el código QR generado para ${name}?`)) {
+                showQR(student.id);
+            }
+        }
+
+        function loadStudentsSection() {
+            updateStudentCourseSelects();
+            loadStudentsList();
+        }
+
+        function updateStudentCourseSelects() {
+            const selects = [
+                document.getElementById('student-course'),
+                document.getElementById('attendance-course'),
+                document.getElementById('report-course')
+            ];
+            
+            selects.forEach(select => {
+                if (!select) return;
+                select.innerHTML = '<option value="">Seleccione un curso</option>';
+                db.courses.forEach(course => {
+                    select.innerHTML += `<option value="${course.id}">${course.name} (${course.year})</option>`;
+                });
+            });
+        }
+
+        function loadStudentsList() {
+            const container = document.getElementById('students-list');
+            container.innerHTML = '';
+            
+            db.courses.forEach(course => {
+                const students = db.getCourseStudents(course.id);
+                if (students.length === 0) return;
+                
+                const courseSection = document.createElement('div');
+                courseSection.innerHTML = `<h3>📚 ${course.name}</h3>`;
+                
+                students.forEach(student => {
+                    const studentCard = document.createElement('div');
+                    studentCard.className = 'student-card';
+                    studentCard.innerHTML = `
+                        <h4>👤 ${student.name}</h4>
+                        <p><strong>Cédula/ID:</strong> ${student.studentId}</p>
+                        <button class="btn" onclick="showQR('${student.id}')">📱 Ver Código QR</button>
+                        <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">🗑️ Eliminar</button>
+                    `;
+                    courseSection.appendChild(studentCard);
+                });
+                
+                container.appendChild(courseSection);
+            });
+        }
+
+        function deleteStudent(studentId) {
+            if (confirm('¿Está seguro de eliminar este estudiante?')) {
+                db.deleteStudent(studentId);
+                loadStudentsList();
+                alert('Estudiante eliminado exitosamente');
+            }
+        }
+
+        function showQR(studentId) {
+            const student = db.students.find(s => s.id === studentId);
+            if (!student) {
+                console.error('Estudiante no encontrado:', studentId);
+                return;
+            }
+            
+            console.log('Generando QR para estudiante:', student.name);
+            console.log('Datos QR:', student.qrCode);
+            
+            document.getElementById('qr-student-name').textContent = student.name;
+            currentQRData = student.qrCode;
+            
+            // Limpiar el contenedor QR
+            const qrContainer = document.getElementById('qr-code');
+            qrContainer.innerHTML = '';
+            
+            // Verificar si QRCode está disponible
+            if (typeof QRCode === 'undefined') {
+                alert('Error: Biblioteca QR no cargada. Verifique su conexión a internet y recargue la página.');
+                return;
+            }
+            
+            try {
+                // Generar el código QR usando QRCode.js
+                new QRCode(qrContainer, {
+                    text: student.qrCode,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                
+                console.log('QR generado exitosamente');
+                document.getElementById('qr-modal').style.display = 'block';
+            } catch (error) {
+                console.error('Error generando QR:', error);
+                alert('Error al generar código QR: ' + error.message);
+            }
+        }
+
+        function closeQRModal() {
+            document.getElementById('qr-modal').style.display = 'none';
+        }
+
+        function downloadQR() {
+            const qrContainer = document.getElementById('qr-code');
+            const img = qrContainer.querySelector('img');
+            
+            if (!img) {
+                alert('No hay código QR para descargar');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = `QR_${document.getElementById('qr-student-name').textContent}.png`;
+            link.href = img.src;
+            link.click();
+        }
+
+        function shareQR() {
+            const qrContainer = document.getElementById('qr-code');
+            const img = qrContainer.querySelector('img');
+            
+            if (!img) {
+                alert('No hay código QR para compartir');
+                return;
+            }
+            
+            // Convertir base64 a blob
+            fetch(img.src)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], 'codigo_qr.png', { type: 'image/png' });
+                    
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({
+                            title: 'Código QR - ' + document.getElementById('qr-student-name').textContent,
+                            text: 'Código QR para control de asistencia UESER',
+                            files: [file]
+                        }).catch(err => {
+                            console.log('Error al compartir:', err);
+                            downloadQR();
+                        });
+                    } else {
+                        // Fallback: descargar
+                        downloadQR();
+                        alert('Se ha descargado el código QR. Puede compartirlo manualmente desde su galería.');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error al procesar imagen:', err);
+                    downloadQR();
+                });
+        }
+
+        // Escáner de QR
+        function loadAttendanceSection() {
+            updateStudentCourseSelects();
+            loadAttendanceList();
+        }
+
+        async function startScanner() {
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+                
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const video = document.getElementById('video');
+                video.srcObject = currentStream;
+                document.getElementById('video-container').style.display = 'block';
+                
+                scannerActive = true;
+                scanQRCode();
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                alert('Error al acceder a la cámara. Verifique los permisos.');
+            }
+        }
+
+        function stopScanner() {
+            scannerActive = false;
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            document.getElementById('video-container').style.display = 'none';
+        }
+
+        function scanQRCode() {
+            if (!scannerActive) return;
+            
+            const video = document.getElementById('video');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    processQRCode(code.data);
+                    return;
+                }
+            }
+            
+            setTimeout(scanQRCode, 100);
+        }
+
+        function processQRCode(qrData) {
+            try {
+                console.log('Procesando QR:', qrData);
+                const data = JSON.parse(qrData);
+                
+                // Verificar que es un código QR válido de UESER
+                if (data.type !== 'UESER_STUDENT') {
+                    alert('Código QR no válido para el sistema UESER');
+                    return;
+                }
+                
+                const courseId = document.getElementById('attendance-course').value;
+                
+                if (!courseId) {
+                    alert('Seleccione un curso antes de escanear');
+                    return;
+                }
+                
+                // Buscar estudiante por ID
+                const student = db.students.find(s => s.id === data.id);
+                if (!student) {
+                    alert('Estudiante no encontrado en la base de datos');
+                    return;
+                }
+                
+                if (student.courseId !== courseId) {
+                    alert('El estudiante no pertenece al curso seleccionado');
+                    return;
+                }
+                
+                // Verificar si ya registró asistencia hoy
+                const today = new Date().toISOString().split('T')[0];
+                const existingAttendance = db.attendance.find(a => 
+                    a.studentId === student.id && a.date === today
+                );
+                
+                if (existingAttendance) {
+                    alert(`${student.name} ya registró asistencia hoy a las ${existingAttendance.time}`);
+                    return;
+                }
+                
+                db.addAttendance(student.id, courseId);
+                alert(`✅ Asistencia registrada para ${student.name}`);
+                loadAttendanceList();
+                
+                // Opcional: detener el escáner después de un escaneo exitoso
+                // stopScanner();
+                
+            } catch (err) {
+                console.error('Error procesando QR:', err);
+                alert('Código QR inválido o corrupto');
+            }
+        }
+
+        function loadCourseForAttendance() {
+            loadAttendanceList();
+        }
+
+        function loadAttendanceList() {
+            const courseId = document.getElementById('attendance-course').value;
+            const container = document.getElementById('attendance-list');
+            
+            if (!courseId) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            const todayAttendance = db.getAttendanceByDate(courseId, today);
+            
+            container.innerHTML = '<h3>📅 Asistencias de Hoy</h3>';
+            
+            if (todayAttendance.length === 0) {
+                container.innerHTML += '<p>No hay registros de asistencia para hoy.</p>';
+                return;
+            }
+            
+            todayAttendance.forEach(record => {
+                const student = db.students.find(s => s.id === record.studentId);
+                if (student) {
+                    const recordDiv = document.createElement('div');
+                    recordDiv.className = 'attendance-record';
+                    recordDiv.innerHTML = `
+                        <strong>${student.name}</strong> - ${record.time}
+                        <small style="display: block; color: #666;">ID: ${student.studentId}</small>
+                    `;
+                    container.appendChild(recordDiv);
+                }
+            });
+        }
+
+        // Reportes
+        function loadReportsSection() {
+            updateStudentCourseSelects();
+            document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
+        }
+
+        function generateReport() {
+            const courseId = document.getElementById('report-course').value;
+            const date = document.getElementById('report-date').value;
+            const container = document.getElementById('report-content');
+            
+            if (!courseId || !date) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const course = db.courses.find(c => c.id === courseId);
+            const students = db.getCourseStudents(courseId);
+            const attendance = db.getAttendanceByDate(courseId, date);
+            
+            let html = `
+                <h3>📋 Reporte de Asistencia</h3>
+                <p><strong>Curso:</strong> ${course.name}</p>
+                <p><strong>Fecha:</strong> ${new Date(date).toLocaleDateString()}</p>
+                <p><strong>Estudiantes Presentes:</strong> ${attendance.length}/${students.length}</p>
+                <hr>
+            `;
+            
+            // Estudiantes presentes
+            html += '<h4 style="color: #28a745;">✅ Estudiantes Presentes:</h4>';
+            attendance.forEach(record => {
+                const student = db.students.find(s => s.id === record.studentId);
+                if (student) {
+                    html += `
+                        <div class="attendance-record">
+                            <strong>${student.name}</strong> - ${record.time}
+                            <small style="display: block; color: #666;">ID: ${student.studentId}</small>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Estudiantes ausentes
+            const absentStudents = students.filter(student => 
+                !attendance.some(record => record.studentId === student.id)
+            );
+            
+            if (absentStudents.length > 0) {
+                html += '<h4 style="color: #dc3545; margin-top: 20px;">❌ Estudiantes Ausentes:</h4>';
+                absentStudents.forEach(student => {
+                    html += `
+                        <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 10px; margin: 5px 0; border-radius: 5px;">
+                            <strong>${student.name}</strong>
+                            <small style="display: block; color: #666;">ID: ${student.studentId}</small>
+                        </div>
+                    `;
+                });
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Exportar e Importar datos
+        function exportToJSON() {
+            const data = {
+                courses: db.courses,
+                students: db.students,
+                attendance: db.attendance,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `asistencia_ueser_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportAttendanceReport() {
+            let csvContent = 'Fecha,Curso,Estudiante,Cedula/ID,Hora\n';
+            
+            db.attendance.forEach(record => {
+                const student = db.students.find(s => s.id === record.studentId);
+                const course = db.courses.find(c => c.id === record.courseId);
+                if (student && course) {
+                    csvContent += `${record.date},"${course.name}","${student.name}","${student.studentId}",${record.time}\n`;
+                }
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reporte_asistencia_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (confirm('¿Está seguro de importar estos datos? Se reemplazarán todos los datos actuales.')) {
+                        db.courses = data.courses || [];
+                        db.students = data.students || [];
+                        db.attendance = data.attendance || [];
+                        
+                        db.saveData('courses', db.courses);
+                        db.saveData('students', db.students);
+                        db.saveData('attendance', db.attendance);
+                        
+                        alert('Datos importados exitosamente');
+                        updateDashboard();
+                        loadCourses();
+                        updateStudentCourseSelects();
+                    }
+                } catch (err) {
+                    alert('Error al importar datos. Verifique que el archivo sea válido.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Solicitar permisos de cámara al cargar la página
+        async function requestCameraPermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                console.log('Permisos de cámara concedidos');
+            } catch (err) {
+                console.warn('Permisos de cámara no concedidos:', err);
+            }
+        }
+
+        // Nota: El Service Worker se debe registrar desde un archivo separado en un servidor real
+        // Para desarrollo local, esta funcionalidad está deshabilitada
+        console.log('Aplicación web lista para usar');
+
+        // Inicialización
+        window.addEventListener('load', () => {
+            requestCameraPermission();
+            updateDashboard();
+            loadCourses();
+            updateStudentCourseSelects();
+        });
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('qr-modal');
+            if (event.target === modal) {
+                closeQRModal();
+            }
+        };
+
+        // Prevenir zoom en dispositivos móviles
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
